@@ -89,6 +89,7 @@ pipeline {
         always {
             node('build-agentt') {
                 cleanWs()
+                docker system prune -a
             }
         }
     }
