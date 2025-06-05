@@ -47,15 +47,7 @@ pipeline {
             steps {
                 withSonarQubeEnv("${SONARQUBE_ENV}") {
                     sh '''
-                        docker stop sonar || true
-                        docker rm sonar || true
-                        docker run -d --name sonar -p 9000:9000 \
-                          -v /home/ubuntu/sonarqube/data:/opt/sonarqube/data \
-                          -v /home/ubuntu/sonarqube/extensions:/opt/sonarqube/extensions \
-                          sonarqube:lts-community
-
                         npm install -g sonar-scanner
-
                         sonar-scanner \
                           -Dsonar.projectKey=ci-cd \
                           -Dsonar.sources=src
