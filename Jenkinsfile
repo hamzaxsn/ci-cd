@@ -1,33 +1,30 @@
 pipeline {
     agent none
-
+    
+    triggers {
+        githubPush()
+    }
+    
     environment {
         IMAGE_NAME = "hamzaxsn/ci-cd"
         IMAGE_TAG = "latest"
-        TEMP_TAG = "temp"
         DOCKER_CREDENTIALS_ID = "dockerhub-cred"
         SONARQUBE_ENV = "SonarQube"
-        TEST_IMAGE_TAR = "image.tar"
     }
-
+    
     stages {
-
+	    
         stage('Build Docker Image') {
-            agent { label 'build-agent' }
+            agent { label 'build-agentt' }
             steps {
-                sh "docker build -t $IMAGE_NAME:$TEMP_TAG ."
-                sh "docker save $IMAGE_NAME:$TEMP_TAG -o $TEST_IMAGE_TAR"
-                archiveArtifacts artifacts: "$TEST_IMAGE_TAR", fingerprint: true
+                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
             }
         }
 
-        stage('Load Image and Security Scan') {
+        stage('Security Scan with Trivy') {
             agent { label 'test-agent' }
             steps {
-                // Copy the image tar artifact from build-agent to test-agent workspace
-                copyArtifacts(projectName: env.JOB_NAME, selector: specific(env.BUILD_NUMBER), filter: "$TEST_IMAGE_TAR")
-                sh "docker load -i $TEST_IMAGE_TAR"
-                sh "trivy image $IMAGE_NAME:$TEMP_TAG"
+                sh 'trivy image $IMAGE_NAME:$IMAGE_TAG'
             }
         }
 
@@ -39,20 +36,24 @@ pipeline {
             steps {
                 withSonarQubeEnv("${SONARQUBE_ENV}") {
                     sh '''
+			            docker stop sonar || true
+			            docker rm sonar || true
+			            docker run -d --name sonar -p 9000:9000 -v /home/ubuntu/sonarqube/data:/opt/sonarqube/data -v /home/ubuntu/sonarqube/extensions:/opt/sonarqube/extensions sonarqube:lts-community
                         npm install -g sonar-scanner
-                        sonar-scanner -Dsonar.projectKey=ci-cd -Dsonar.sources=src
+                        sonar-scanner \
+                          -Dsonar.projectKey=ci-cd \
+                          -Dsonar.sources=src \
                     '''
                 }
             }
         }
 
-        stage('Tag and Push to Docker Hub') {
-            agent { label 'test-agent' }
+        stage('Push to DockerHub') {
+            agent { label 'build-agent' }
             steps {
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     sh '''
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                        docker tag $IMAGE_NAME:$TEMP_TAG $IMAGE_NAME:$IMAGE_TAG
                         docker push $IMAGE_NAME:$IMAGE_TAG
                     '''
                 }
@@ -62,28 +63,25 @@ pipeline {
         stage('Deploy to Production') {
             agent { label 'deploy-agent' }
             steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                    sh '''
-                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                        docker pull $IMAGE_NAME:$IMAGE_TAG
-                        docker stop react-app || true
-                        docker rm react-app || true
-                        docker run -d --name react-app -p 80:80 $IMAGE_NAME:$IMAGE_TAG
-                    '''
-                }
+                sh '''
+                    docker pull $IMAGE_NAME:$IMAGE_TAG
+                    docker stop react-app || true
+                    docker rm react-app || true
+                    docker run -d --name react-app -p 80:80 $IMAGE_NAME:$IMAGE_TAG
+                '''
             }
         }
     }
 
     post {
         failure {
-            echo '❌ Pipeline failed.'
+            echo '❌ Pipeline failed. No image pushed to DockerHub.'
         }
         success {
-            echo '✅ Pipeline completed successfully.'
-        }
-        always {
-            cleanWs()
+            echo '✅ Pipeline completed successfully. Image pushed and deployed.'
+	}
+	always {
+	    cleanWs()
         }
     }
 }
