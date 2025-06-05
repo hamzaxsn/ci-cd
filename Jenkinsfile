@@ -73,16 +73,15 @@ pipeline {
     }
 
     post {
-        failure {
-            echo '❌ Pipeline failed. No image pushed to DockerHub.'
-        }
-        success {
-            echo '✅ Pipeline completed successfully. Image pushed and deployed.'
-        }
-        always {
-            node {
-                cleanWs()
-            }
+    failure {
+        echo '❌ Pipeline failed. No image pushed to DockerHub.'
+    }
+    success {
+        echo '✅ Pipeline completed successfully. Image pushed and deployed.'
+    }
+    always {
+        node('build-agent') {
+            cleanWs()
         }
     }
 }
