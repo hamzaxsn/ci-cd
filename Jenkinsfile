@@ -1,19 +1,18 @@
 pipeline {
     agent none
-    
+
     triggers {
         githubPush()
     }
-    
+
     environment {
         IMAGE_NAME = "hamzaxsn/ci-cd"
         IMAGE_TAG = "latest"
         DOCKER_CREDENTIALS_ID = "dockerhub-cred"
         SONARQUBE_ENV = "SonarQube"
     }
-    
+
     stages {
-	    
         stage('Build Docker Image') {
             agent { label 'build-agentt' }
             steps {
@@ -42,7 +41,7 @@ pipeline {
                         npm install -g sonar-scanner
                         sonar-scanner \
                           -Dsonar.projectKey=ci-cd \
-                          -Dsonar.sources=src \
+                          -Dsonar.sources=src
                     '''
                 }
             }
@@ -79,9 +78,11 @@ pipeline {
         }
         success {
             echo '✅ Pipeline completed successfully. Image pushed and deployed.'
-	}
-	always {
-	    cleanWs()
+        }
+        always {
+            node {
+                cleanWs()
+            }
         }
     }
 }
