@@ -17,20 +17,24 @@ pipeline {
             agent { label 'build-agentt' }
             steps {
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                sh """
-                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
-                """
-                sh 'docker push hamzaxsn/ci-cd:latest'
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                    '''
+                }
+                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
 
         stage('Security Scan with Trivy') {
             agent { label 'test-agent' }
             steps {
-                sh """
-                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
-                """
-                sh 'docker pull hamzaxsn/ci-cd:latest'
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                    '''
+                }
+                sh "docker pull ${IMAGE_NAME}:${IMAGE_TAG}"
                 sh "trivy image ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
@@ -63,7 +67,7 @@ pipeline {
         stage('Push to DockerHub') {
             agent { label 'build-agentt' }
             steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh '''
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
@@ -75,12 +79,12 @@ pipeline {
         stage('Deploy to Production') {
             agent { label 'deploy-agent' }
             steps {
-                sh '''
+                sh """
                     docker pull ${IMAGE_NAME}:${IMAGE_TAG}
                     docker stop react-app || true
                     docker rm react-app || true
                     docker run -d --name react-app -p 80:80 ${IMAGE_NAME}:${IMAGE_TAG}
-                '''
+                """
             }
         }
     }
