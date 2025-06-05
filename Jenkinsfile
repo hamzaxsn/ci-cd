@@ -17,12 +17,14 @@ pipeline {
             agent { label 'build-agentt' }
             steps {
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh 'docker push hamzaxsn/ci-cd:latest'
             }
         }
 
         stage('Security Scan with Trivy') {
             agent { label 'test-agent' }
             steps {
+                sh 'docker pull hamzaxsn/ci-cd:latest'
                 sh "trivy image ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
