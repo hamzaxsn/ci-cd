@@ -17,6 +17,9 @@ pipeline {
             agent { label 'build-agentt' }
             steps {
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh """
+                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                """
                 sh 'docker push hamzaxsn/ci-cd:latest'
             }
         }
@@ -24,6 +27,9 @@ pipeline {
         stage('Security Scan with Trivy') {
             agent { label 'test-agent' }
             steps {
+                sh """
+                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                """
                 sh 'docker pull hamzaxsn/ci-cd:latest'
                 sh "trivy image ${IMAGE_NAME}:${IMAGE_TAG}"
             }
