@@ -13,6 +13,23 @@ pipeline {
     }
 
     stages {
+        stage('SonarQube Analysis') {
+            agent { label 'test-agent' }
+            environment {
+                SONAR_TOKEN = credentials('sonar-cred')
+            }
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                        npm install -g sonar-scanner
+                        sonar-scanner \
+                          -Dsonar.projectKey=ci-cd \
+                          -Dsonar.sources=src
+                    '''
+                }
+            }
+        }
+        
         stage('Build Docker Image') {
             agent { label 'build-agentt' }
             steps {
@@ -36,23 +53,6 @@ pipeline {
                 }
                 sh "docker pull ${IMAGE_NAME}:${IMAGE_TAG}"
                 sh "trivy image ${IMAGE_NAME}:${IMAGE_TAG}"
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            agent { label 'test-agent' }
-            environment {
-                SONAR_TOKEN = credentials('sonar-cred')
-            }
-            steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    sh '''
-                        npm install -g sonar-scanner
-                        sonar-scanner \
-                          -Dsonar.projectKey=ci-cd \
-                          -Dsonar.sources=src
-                    '''
-                }
             }
         }
 
