@@ -1,12 +1,11 @@
 {
 	"id": 1,
-	"name": "Hamza Snoussi",
-	"email": "snoussiihamza@gmail.com.com",
-	"phone": "+21625432270",
-	"city": "Msaken",
-	"state": "Sousse",
-	"country": "Tunisia",
-	"organization": "ISET",
-	"jobProfile": "IT Student",
-	"additionalInfo": "Son pfe se caractérise en mettre en place une ci/cd opérationelle"
+	"Name": "Hamza Snoussi",
+	"Email": "snoussiihamza@gmail.com.com",
+	"Phone": "+21625432270",
+	"City": "M'saken",
+	"State": "Sousse",
+	"Country": "Tunisia",
+	"Organization": "ISET",
+	"Job Profile": "IT Student",
 }
