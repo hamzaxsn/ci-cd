@@ -16,7 +16,7 @@ class App extends Component {
           <img src={logo} className="App-logo" alt="logo" />
           <h1 className="App-title">Simple React App</h1>
         </header>
-          <Switch>
+          
                 <Route exact path= "/" render={() => (
                   <Redirect to="/customerlist"/>
                 )}/>
